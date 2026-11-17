@@ -1,0 +1,50 @@
+CREATE TABLE IF NOT EXISTS categories (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(80) NOT NULL UNIQUE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS borrowers (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  campus_id VARCHAR(40) NOT NULL UNIQUE,
+  name VARCHAR(120) NOT NULL,
+  email VARCHAR(254) NOT NULL UNIQUE,
+  department VARCHAR(120) NOT NULL,
+  active BOOLEAN NOT NULL DEFAULT TRUE,
+  CHECK (active IN (0, 1))
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS equipment (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  asset_tag VARCHAR(40) NOT NULL UNIQUE,
+  name VARCHAR(120) NOT NULL,
+  category_id INT NOT NULL,
+  location VARCHAR(120) NOT NULL,
+  item_condition ENUM('Good', 'Fair', 'Needs repair') NOT NULL DEFAULT 'Good',
+  service_status ENUM('Ready', 'Maintenance', 'Retired') NOT NULL DEFAULT 'Ready',
+  FOREIGN KEY (category_id) REFERENCES categories(id),
+  CHECK (item_condition <> 'Needs repair' OR service_status <> 'Ready')
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS loans (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  borrower_id INT NOT NULL,
+  issued_on DATE NOT NULL,
+  due_on DATE NOT NULL,
+  notes VARCHAR(1000) NOT NULL DEFAULT '',
+  FOREIGN KEY (borrower_id) REFERENCES borrowers(id),
+  CHECK (due_on >= issued_on)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS loan_items (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  loan_id INT NOT NULL,
+  equipment_id INT NOT NULL,
+  returned_on DATE DEFAULT NULL,
+  -- Returned assets produce NULL here, which permits many historical loans.
+  active_equipment_id INT GENERATED ALWAYS AS
+    (CASE WHEN returned_on IS NULL THEN equipment_id ELSE NULL END) STORED,
+  FOREIGN KEY (loan_id) REFERENCES loans(id),
+  FOREIGN KEY (equipment_id) REFERENCES equipment(id),
+  UNIQUE (loan_id, equipment_id),
+  UNIQUE (active_equipment_id)
+) ENGINE=InnoDB;

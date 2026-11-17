@@ -1,0 +1,33 @@
+import { Router } from 'express';
+import db from '../db.js';
+import { body, text, id, fail } from '../validation.js';
+
+const router = Router();
+router.get('/', async (req, res) => {
+  const [rows] = await db.query(`SELECT b.*, (SELECT COUNT(*) FROM loans l JOIN loan_items li ON li.loan_id = l.id
+    WHERE l.borrower_id = b.id AND li.returned_on IS NULL) AS items_out FROM borrowers b ORDER BY b.name`);
+  res.json(rows);
+});
+
+function values(data) {
+  body(data);
+  const email = text(data, 'email', 254).toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) fail(400, 'Enter a valid email address.');
+  if (![0, 1].includes(data.active)) fail(400, 'Choose an active or inactive borrower status.');
+  return [text(data, 'campus_id', 40), text(data, 'name'), email, text(data, 'department'), data.active];
+}
+router.post('/', async (req, res) => {
+  const [result] = await db.execute('INSERT INTO borrowers (campus_id, name, email, department, active) VALUES (?, ?, ?, ?, ?)', values(req.body));
+  res.status(201).json({ id: result.insertId });
+});
+router.put('/:id', async (req, res) => {
+  const [result] = await db.execute('UPDATE borrowers SET campus_id = ?, name = ?, email = ?, department = ?, active = ? WHERE id = ?', [...values(req.body), id(req.params.id)]);
+  if (!result.affectedRows) fail(404, 'Borrower not found.');
+  res.json({ message: 'Borrower updated.' });
+});
+router.delete('/:id', async (req, res) => {
+  const [result] = await db.execute('DELETE FROM borrowers WHERE id = ?', [id(req.params.id)]);
+  if (!result.affectedRows) fail(404, 'Borrower not found.');
+  res.json({ message: 'Borrower deleted.' });
+});
+export default router;
