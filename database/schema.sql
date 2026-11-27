@@ -19,10 +19,10 @@ CREATE TABLE IF NOT EXISTS equipment (
   name VARCHAR(120) NOT NULL,
   category_id INT NOT NULL,
   location VARCHAR(120) NOT NULL,
-  item_condition ENUM('Good', 'Fair', 'Needs repair') NOT NULL DEFAULT 'Good',
-  service_status ENUM('Ready', 'Maintenance', 'Retired') NOT NULL DEFAULT 'Ready',
+  quantity INT NOT NULL DEFAULT 1,
+  maintenance_quantity INT NOT NULL DEFAULT 0,
   FOREIGN KEY (category_id) REFERENCES categories(id),
-  CHECK (item_condition <> 'Needs repair' OR service_status <> 'Ready')
+  CHECK (quantity >= 0 AND maintenance_quantity >= 0 AND maintenance_quantity <= quantity)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS loans (
@@ -40,11 +40,8 @@ CREATE TABLE IF NOT EXISTS loan_items (
   loan_id INT NOT NULL,
   equipment_id INT NOT NULL,
   returned_on DATE DEFAULT NULL,
-  -- Returned assets produce NULL here, which permits many historical loans.
-  active_equipment_id INT GENERATED ALWAYS AS
-    (CASE WHEN returned_on IS NULL THEN equipment_id ELSE NULL END) STORED,
+  damaged BOOLEAN NOT NULL DEFAULT FALSE,
   FOREIGN KEY (loan_id) REFERENCES loans(id),
   FOREIGN KEY (equipment_id) REFERENCES equipment(id),
-  UNIQUE (loan_id, equipment_id),
-  UNIQUE (active_equipment_id)
+  UNIQUE (loan_id, equipment_id)
 ) ENGINE=InnoDB;
