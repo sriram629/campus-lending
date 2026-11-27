@@ -2,6 +2,8 @@
 
 Campus Lending is a local equipment desk application built with React, Express, and MySQL. Staff look up students by ID, issue equipment, inspect returned items, and manage stock and borrowing restrictions. The interface uses black, white, and gray.
 
+**Live demo:** [campus-lending.onrender.com](https://campus-lending.onrender.com)
+
 ## 🎯 Features
 
 - Equipment quantities: total, available, borrowed, and in maintenance. Equipment category filtering and text search.
@@ -13,7 +15,7 @@ Campus Lending is a local equipment desk application built with React, Express, 
 - Dashboard counts and editing, equipment/category CRUD, borrower CRUD, and loan history.
 - Initial sample data: 15 fictitious students, 24 equipment types, and 20 loans. On setup day, eight loans are active, seven overdue, and five returned.
 
-This is a single-operator academic project without authentication. Run it locally. GitHub stores the source; it does not host the running Express/MySQL application.
+This is an academic project without authentication. The public deployment is for fictitious demo records only; visitors can modify its data. GitHub stores the source, Render hosts the app, and Filess.io hosts the cloud MySQL database. Local Docker and native development remain available.
 
 ## 🛠 Software and Versions
 
@@ -583,6 +585,7 @@ campus-lending/
 │   └── package.json
 ├── Dockerfile
 ├── compose.yaml
+├── render.yaml
 ├── .dockerignore
 ├── .env.example
 ├── .gitignore
@@ -621,6 +624,8 @@ The Docker build and API workflow audit covered fresh seed counts, CRUD, quota c
 - [Pull requests](https://github.com/sriram629/campus-lending/pulls)
 
 ## ☁️ Render + External MySQL Deployment
+
+The live demo uses Render Free in Frankfurt and a Filess.io free MySQL database. The deployed database reports MySQL 8.0.46; the connection uses verified TLS. Initial cloud records are independent of local records. Automatic deployment is disabled: after pushing to `dev`, choose Manual Deploy → Deploy latest commit in Render.
 
 The Docker web service can run on Render Free with a separately hosted MySQL database. `render.yaml` describes the web service only; it does not create or pay for a database. Use a new database containing only the fictitious sample data, because this academic app has no login and visitors can modify records.
 

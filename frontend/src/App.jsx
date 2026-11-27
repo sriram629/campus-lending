@@ -51,7 +51,7 @@ export default function App() {
   return <div className="app-shell">
     <aside className="sidebar"><a href="#" onClick={event => { event.preventDefault(); navigate('dashboard'); }} className="brand"><span className="brand-mark">CL</span><span>Campus Lending<small>Equipment desk</small></span></a>
       <div className="nav-label">WORKSPACE</div><nav aria-label="Main navigation">{pages.map(([key, label, Icon]) => <button key={key} aria-current={page === key ? 'page' : undefined} onClick={() => navigate(key)}><Icon size={18} strokeWidth={1.6} />{label}</button>)}</nav>
-      <div className="sidebar-bottom"><GraduationCap size={22} strokeWidth={1.5} /><span>Campus resource services<small>Staff workspace · Local</small></span></div>
+      <div className="sidebar-bottom"><GraduationCap size={22} strokeWidth={1.5} /><span>Campus resource services<small>Staff workspace</small></span></div>
     </aside>
     <main className="main"><div className="topbar"><span>Campus resources <span className="slash">/</span> {pages.find(item => item[0] === page)[1]}</span><button className="refresh-button" disabled={loading} onClick={load}><RefreshCw size={14} />Refresh</button></div>
       {message && <div role="status" className="notice">{message}<button aria-label="Dismiss message" onClick={() => setMessage('')}>×</button></div>}
