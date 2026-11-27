@@ -39,7 +39,6 @@ router.post('/', async (req, res) => {
     if (held.length + equipmentIds.length > 3) fail(409, `Only ${3 - held.length} item(s) remaining in this student's quota.`);
     if (equipmentIds.some(item => held.some(existing => existing.equipment_id === item)))
       fail(409, 'A student can borrow only one of each equipment type at a time.');
-    // Lock physical items in ID order before checking their availability.
     for (const equipmentId of equipmentIds) {
       const [assets] = await connection.execute('SELECT quantity, maintenance_quantity FROM equipment WHERE id = ? FOR UPDATE', [equipmentId]);
       if (!assets.length) fail(404, 'Equipment not found.');
