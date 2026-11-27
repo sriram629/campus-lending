@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: campus-lending
+    runtime: docker
+    branch: dev
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    autoDeployTrigger: off
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: "10000"
+      - key: DB_SSL
+        value: "true"
+      - key: DB_POOL_SIZE
+        value: "2"
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: TZ
+        value: UTC

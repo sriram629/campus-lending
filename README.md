@@ -2,6 +2,8 @@
 
 Campus Lending is a local equipment desk application built with React, Express, and MySQL. Staff look up students by ID, issue equipment, inspect returned items, and manage stock and borrowing restrictions. The interface uses black, white, and gray.
 
+**Live demo:** [campus-lending.onrender.com](https://campus-lending.onrender.com)
+
 ## 🎯 Features
 
 - Equipment quantities: total, available, borrowed, and in maintenance. Equipment category filtering and text search.
@@ -13,7 +15,7 @@ Campus Lending is a local equipment desk application built with React, Express, 
 - Dashboard counts and editing, equipment/category CRUD, borrower CRUD, and loan history.
 - Initial sample data: 15 fictitious students, 24 equipment types, and 20 loans. On setup day, eight loans are active, seven overdue, and five returned.
 
-This is a single-operator academic project without authentication. Run it locally. GitHub stores the source; it does not host the running Express/MySQL application.
+This is an academic project without authentication. The public deployment is for fictitious demo records only; visitors can modify its data. GitHub stores the source, Render hosts the app, and Filess.io hosts the cloud MySQL database. Local Docker and native development remain available.
 
 ## 🛠 Software and Versions
 
@@ -583,6 +585,7 @@ campus-lending/
 │   └── package.json
 ├── Dockerfile
 ├── compose.yaml
+├── render.yaml
 ├── .dockerignore
 ├── .env.example
 ├── .gitignore
@@ -619,3 +622,28 @@ The Docker build and API workflow audit covered fresh seed counts, CRUD, quota c
 - [Source code](https://github.com/sriram629/campus-lending)
 - [Development branch](https://github.com/sriram629/campus-lending/tree/dev)
 - [Pull requests](https://github.com/sriram629/campus-lending/pulls)
+
+## ☁️ Render + External MySQL Deployment
+
+The live demo uses Render Free in Frankfurt and a Filess.io free MySQL database. The deployed database reports MySQL 8.0.46; the connection uses verified TLS. Initial cloud records are independent of local records. Automatic deployment is disabled: after pushing to `dev`, choose Manual Deploy → Deploy latest commit in Render.
+
+The Docker web service can run on Render Free with a separately hosted MySQL database. `render.yaml` describes the web service only; it does not create or pay for a database. Use a new database containing only the fictitious sample data, because this academic app has no login and visitors can modify records.
+
+1. Create a free MySQL 8 database with an external provider such as Filess.io. Retain its assigned database name, hostname, port, username, and generated password. Verify its current free-plan limits in the provider dashboard.
+2. In Render, create a Web Service from `sriram629/campus-lending`, branch `dev`, runtime Docker, using the root Dockerfile. Choose the Free instance and a region near the database. A Blueprint deployment using `render.yaml` is an alternative.
+3. Configure the following environment variables in Render. Enter credentials through the dashboard; do not commit them to Git.
+
+| Variable | Render value |
+| :--- | :--- |
+| `HOST` | `0.0.0.0` |
+| `PORT` | `10000` |
+| `DB_HOST`, `DB_PORT` | Provider's database host and port |
+| `DB_USER`, `DB_PASSWORD`, `DB_NAME` | Provider's generated credentials and database name |
+| `DB_SSL` | `true` — enables TLS and verifies the server certificate |
+| `DB_POOL_SIZE` | `2` — limits connections on a small shared database |
+| `TZ` | `UTC` |
+
+4. Set the health-check path to `/api/health` and disable automatic deployment if updates should be released manually. Deploy and wait for the service to become Live.
+5. Open the assigned HTTPS URL and check `/api/health`, the dashboard, student lookup, and loan flows. The Docker startup initializes an empty database from the constants; redeploying preserves existing records.
+
+Render Free may sleep after inactivity, so the next visit can take longer. The database remains with its external provider. Local Docker, native development, and this cloud deployment each have independent data. Keep local `DB_SSL=false` for the existing local MySQL setup; the cloud connection uses verified TLS. Database backups and storage limits are managed separately by the provider. See [Render free limits](https://render.com/docs/free) and [Filess.io plans](https://docs.filess.io/docs/pricing/plans/).
