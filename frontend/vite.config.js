@@ -3,7 +3,6 @@ import react from '@vitejs/plugin-react';
 import { fileURLToPath } from 'node:url';
 
 export default defineConfig(() => {
-  // Read only the backend port for the development proxy; secrets stay server-side.
   const env = loadEnv('', fileURLToPath(new URL('../backend', import.meta.url)), 'PORT');
   return {
     plugins: [react()],

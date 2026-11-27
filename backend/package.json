@@ -2,6 +2,14 @@
   "name": "campus-backend",
   "private": true,
   "type": "module",
-  "scripts": {"dev": "node --watch server.js", "start": "node server.js", "db:setup": "node db.js --setup"},
-  "dependencies": {"express": "^5.1.0", "mysql2": "^3.15.0", "dotenv": "^17.2.3"}
+  "scripts": {
+    "dev": "node --watch server.js",
+    "start": "node server.js",
+    "db:setup": "node db.js --setup"
+  },
+  "dependencies": {
+    "express": "5.3.0",
+    "mysql2": "3.24.6",
+    "dotenv": "17.4.2"
+  }
 }

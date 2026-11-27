@@ -2,13 +2,20 @@
   "name": "campus-lending",
   "private": true,
   "version": "1.0.0",
-  "workspaces": ["frontend", "backend"],
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
   "scripts": {
     "dev": "concurrently -k -n api,web \"npm run dev -w backend\" \"npm run dev -w frontend\"",
     "build": "npm run build -w frontend",
     "start": "npm run start -w backend",
     "db:setup": "npm run db:setup -w backend"
   },
-  "devDependencies": {"concurrently": "^9.2.1"},
-  "engines": {"node": ">=22.12.0"}
+  "devDependencies": {
+    "concurrently": "9.2.5"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
 }

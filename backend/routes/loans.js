@@ -29,8 +29,9 @@ router.post('/', async (req, res) => {
     await connection.beginTransaction();
     const [[clock]] = await connection.query('SELECT CURRENT_DATE AS today');
     if (due < clock.today) fail(400, 'The due date cannot be before today.');
-    const [borrowers] = await connection.execute('SELECT active FROM borrowers WHERE id = ? FOR UPDATE', [borrowerId]);
+    const [borrowers] = await connection.execute('SELECT active, restricted FROM borrowers WHERE id = ? FOR UPDATE', [borrowerId]);
     if (!borrowers.length) fail(404, 'Borrower not found.');
+    if (borrowers[0].restricted) fail(409, 'Borrowing restricted after a damaged return. Update the student status in Borrowers before issuing another loan.');
     if (!borrowers[0].active) fail(409, 'This borrower is inactive.');
     const [held] = await connection.execute(`SELECT li.equipment_id FROM loan_items li JOIN loans l ON l.id = li.loan_id
       WHERE l.borrower_id = ? AND li.returned_on IS NULL`, [borrowerId]);
@@ -38,7 +39,6 @@ router.post('/', async (req, res) => {
     if (held.length + equipmentIds.length > 3) fail(409, `Only ${3 - held.length} item(s) remaining in this student's quota.`);
     if (equipmentIds.some(item => held.some(existing => existing.equipment_id === item)))
       fail(409, 'A student can borrow only one of each equipment type at a time.');
-    // Lock physical items in ID order before checking their availability.
     for (const equipmentId of equipmentIds) {
       const [assets] = await connection.execute('SELECT quantity, maintenance_quantity FROM equipment WHERE id = ? FOR UPDATE', [equipmentId]);
       if (!assets.length) fail(404, 'Equipment not found.');
@@ -80,7 +80,10 @@ router.post('/:id/return', async (req, res) => {
   if (damagedIds.some(item => !itemIds.includes(item))) fail(400, 'Only selected return items can be marked damaged.');
   const connection = await db.getConnection();
   try {
+    const [owners] = await connection.execute('SELECT borrower_id FROM loans WHERE id = ?', [recordId]);
+    if (!owners.length) fail(404, 'Loan not found.');
     await connection.beginTransaction();
+    await connection.execute('SELECT id FROM borrowers WHERE id = ? FOR UPDATE', [owners[0].borrower_id]);
     const [loans] = await connection.execute('SELECT id FROM loans WHERE id = ? FOR UPDATE', [recordId]);
     if (!loans.length) fail(404, 'Loan not found.');
     const [items] = await connection.execute('SELECT id, equipment_id, returned_on FROM loan_items WHERE loan_id = ? ORDER BY equipment_id', [recordId]);
@@ -92,6 +95,7 @@ router.post('/:id/return', async (req, res) => {
       await connection.execute('UPDATE loan_items SET returned_on = CURRENT_DATE, damaged = ? WHERE id = ?', [damaged, item.id]);
       if (damaged) await connection.execute('UPDATE equipment SET maintenance_quantity = maintenance_quantity + 1 WHERE id = ?', [item.equipment_id]);
     }
+    if (damagedIds.length) await connection.execute('UPDATE borrowers SET restricted = 1 WHERE id = ?', [owners[0].borrower_id]);
     await connection.commit();
     res.json({ message: 'Return recorded. Damaged items moved to maintenance.' });
   } catch (error) {

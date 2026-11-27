@@ -1,0 +1,43 @@
+name: campus-lending
+services:
+  db:
+    image: mysql:8.4@sha256:8c233bad33d520a7aae1c1e619c3a9775f4a1ba2d463d692fada04ec7f40be00
+    environment:
+      MYSQL_DATABASE: campus_lending
+      MYSQL_USER: campus_user
+      MYSQL_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
+      TZ: UTC
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=$$MYSQL_PASSWORD mysql -h 127.0.0.1 -u campus_user campus_lending -e 'SELECT 1' >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+  app:
+    build: .
+    init: true
+    environment:
+      HOST: 0.0.0.0
+      PORT: 5002
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: campus_lending
+      DB_USER: campus_user
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      TZ: UTC
+    ports:
+      - "127.0.0.1:${APP_PORT:-5003}:5002"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5002/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+volumes:
+  mysql-data:

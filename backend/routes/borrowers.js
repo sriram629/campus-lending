@@ -36,6 +36,13 @@ router.put('/:id', async (req, res) => {
   if (!result.affectedRows) fail(404, 'Borrower not found.');
   res.json({ message: 'Borrower updated.' });
 });
+router.patch('/:id/restriction', async (req, res) => {
+  const restricted = body(req.body).restricted;
+  if (![0, 1].includes(restricted)) fail(400, 'Choose a valid borrowing status.');
+  const [result] = await db.execute('UPDATE borrowers SET restricted = ? WHERE id = ?', [restricted, id(req.params.id)]);
+  if (!result.affectedRows) fail(404, 'Borrower not found.');
+  res.json({ message: restricted ? 'Borrowing restricted.' : 'Borrowing restriction cleared.' });
+});
 router.delete('/:id', async (req, res) => {
   const [result] = await db.execute('DELETE FROM borrowers WHERE id = ?', [id(req.params.id)]);
   if (!result.affectedRows) fail(404, 'Borrower not found.');

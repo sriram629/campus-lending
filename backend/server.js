@@ -31,7 +31,7 @@ if (existsSync(frontend)) {
 app.use((error, req, res, next) => {
   if (error.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'This asset tag, campus ID, email, category, or active loan already exists.' });
   if (['ER_ROW_IS_REFERENCED_2', 'ER_NO_REFERENCED_ROW_2'].includes(error.code)) {
-    return res.status(409).json({ error: 'This record is linked to other data. Retire equipment or deactivate borrowers to preserve loan history.' });
+    return res.status(409).json({ error: 'This record is linked to other data. Keep equipment with loan history, or deactivate borrowers to preserve their history.' });
   }
   if (['ER_LOCK_DEADLOCK', 'ER_LOCK_WAIT_TIMEOUT'].includes(error.code)) return res.status(409).json({ error: 'Another request is changing this record. Please try again.' });
   if (['ECONNREFUSED', 'PROTOCOL_CONNECTION_LOST', 'ER_ACCESS_DENIED_ERROR'].includes(error.code)) {

@@ -4,6 +4,7 @@ import { PageHeader, SearchInput, Empty, Modal, Field, DeleteModal } from '../co
 
 export default function Equipment({ data, save }) {
   const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('');
   const [filter, setFilter] = useState('');
   const [modal, setModal] = useState(null);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
@@ -12,7 +13,7 @@ export default function Equipment({ data, save }) {
   const [categoryEdit, setCategoryEdit] = useState(null);
   const [categoryError, setCategoryError] = useState('');
   const [categoryBusy, setCategoryBusy] = useState(false);
-  const records = data.equipment.filter(item => `${item.name} ${item.asset_tag} ${item.category} ${item.location}`.toLowerCase().includes(search.toLowerCase()) && (!filter || (filter === 'Available' ? item.available > 0 : filter === 'On loan' ? item.on_loan > 0 : item.maintenance_quantity > 0)));
+  const records = data.equipment.filter(item => `${item.name} ${item.asset_tag} ${item.category} ${item.location}`.toLowerCase().includes(search.toLowerCase()) && (!category || String(item.category_id) === category) && (!filter || (filter === 'Available' ? item.available > 0 : filter === 'On loan' ? item.on_loan > 0 : item.maintenance_quantity > 0)));
   function edit(item = null) {
     setForm(item ? { ...item } : { asset_tag: '', name: '', category_id: data.categories[0]?.id || '', location: '', quantity: 1, maintenance_quantity: 0 });
     setModal({ type: 'edit', item });
@@ -32,7 +33,7 @@ export default function Equipment({ data, save }) {
     <PageHeader title="Equipment" description="Manage the equipment available across campus." action="Add equipment" onAction={() => edit()} />
     <section className="panel"><div className="panel-heading"><div><h2>Equipment register</h2><p>{data.equipment.length} equipment types across {data.categories.length} categories</p></div><button onClick={() => setCategoriesOpen(!categoriesOpen)} aria-expanded={categoriesOpen}><Tags size={15} />Categories</button></div>
       {categoriesOpen && <div className="category-panel"><form onSubmit={saveCategory}><Field label={categoryEdit ? 'Rename category' : 'New category'}><input value={categoryName} onChange={event => setCategoryName(event.target.value)} maxLength={80} required placeholder="Category name" disabled={categoryBusy} /></Field><button type="submit" disabled={categoryBusy}><Plus size={14} />{categoryEdit ? 'Save' : 'Add'}</button>{categoryEdit && <button type="button" onClick={() => { setCategoryEdit(null); setCategoryName(''); }}>Cancel</button>}</form>{categoryError && <p role="alert" className="error-message">{categoryError}</p>}<div className="category-list">{data.categories.map(category => <div key={category.id}><span>{category.name}</span><button onClick={() => { setCategoryEdit(category.id); setCategoryName(category.name); }}>Rename</button><button onClick={() => setModal({ type: 'category-delete', item: category })}>Delete</button></div>)}</div></div>}
-      <div className="filters"><SearchInput value={search} onChange={setSearch} label="Search equipment" /><label className="filter-select"><span className="sr-only">Availability</span><select value={filter} onChange={event => setFilter(event.target.value)}><option value="">All availability</option>{['Available', 'On loan', 'Maintenance'].map(status => <option key={status}>{status}</option>)}</select></label></div>
+      <div className="filters"><SearchInput value={search} onChange={setSearch} label="Search name, code or category" /><label className="filter-select"><span className="sr-only">Equipment category</span><select value={category} onChange={e => setCategory(e.target.value)}><option value="">All categories</option>{data.categories.map(item => <option value={item.id} key={item.id}>{item.name}</option>)}</select></label><label className="filter-select"><span className="sr-only">Availability</span><select value={filter} onChange={event => setFilter(event.target.value)}><option value="">All availability</option>{['Available', 'On loan', 'Maintenance'].map(status => <option key={status}>{status}</option>)}</select></label></div>
       {!records.length ? <Empty /> : <div className="table-scroll"><table><thead><tr><th>Equipment</th><th>Category</th><th>Location</th><th>Availability</th><th className="actions-heading">Actions</th></tr></thead><tbody>{records.map(item => <tr key={item.id}><td><strong>{item.name}</strong><small>{item.asset_tag}</small></td><td>{item.category}</td><td>{item.location}</td><td><strong>{item.available} available / {item.quantity} total</strong><small>{item.on_loan} borrowed · {item.maintenance_quantity} in maintenance</small></td><td><div className="row-actions"><button onClick={() => edit(item)} aria-label={`Edit ${item.asset_tag}`}>Edit</button><button onClick={() => setModal({ type: 'delete', item })} aria-label={`Delete ${item.asset_tag}`}>Delete</button></div></td></tr>)}</tbody></table></div>}
       <div className="panel-footer">{records.length} equipment record{records.length === 1 ? '' : 's'} shown</div>
     </section>
