@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS borrowers (
   email VARCHAR(254) NOT NULL UNIQUE,
   department VARCHAR(120) NOT NULL,
   active BOOLEAN NOT NULL DEFAULT TRUE,
+  restricted BOOLEAN NOT NULL DEFAULT FALSE,
+  CHECK (restricted IN (0, 1)),
   CHECK (active IN (0, 1))
 ) ENGINE=InnoDB;
 

@@ -33,6 +33,9 @@ if (process.argv.includes("--setup")) {
     for (const statement of sql.split(";").filter((part) => part.trim()))
       await db.query(statement);
     // Upgrade the original individual-asset schema without removing loan history.
+    const [borrowerColumns] = await db.query('SHOW COLUMNS FROM borrowers');
+    if (!borrowerColumns.some(column => column.Field === 'restricted'))
+      await db.query('ALTER TABLE borrowers ADD restricted BOOLEAN NOT NULL DEFAULT FALSE, ADD CHECK (restricted IN (0, 1))');
     const [columns] = await db.query('SHOW COLUMNS FROM equipment');
     if (!columns.some(column => column.Field === 'quantity')) {
       await db.query('ALTER TABLE equipment ADD quantity INT NOT NULL DEFAULT 1, ADD maintenance_quantity INT NOT NULL DEFAULT 0');

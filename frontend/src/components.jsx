@@ -17,7 +17,7 @@ export function formatDate(value) {
 }
 
 export function Status({ children }) {
-  const style = ['Overdue', 'Maintenance', 'Needs repair'].includes(children) ? 'dark' : ['Inactive', 'Returned'].includes(children) ? 'muted' : '';
+  const style = ['Overdue', 'Maintenance', 'Needs repair', 'Restricted'].includes(children) ? 'dark' : ['Inactive', 'Returned'].includes(children) ? 'muted' : '';
   return <span className={`status ${style}`}>{children}</span>;
 }
 
@@ -37,7 +37,7 @@ export function Field({ label, children }) {
   return <label className="field"><span>{label}</span>{children}</label>;
 }
 
-export function Modal({ title, children, onClose, onSave, submitLabel = 'Save changes', description }) {
+export function Modal({ title, children, onClose, onSave, submitLabel = 'Save changes', description, submitDisabled = false }) {
   const ref = useRef(null);
   const busyRef = useRef(false);
   const [error, setError] = useState('');
@@ -65,7 +65,7 @@ export function Modal({ title, children, onClose, onSave, submitLabel = 'Save ch
   }
   return <dialog ref={ref} aria-labelledby="modal-title" onCancel={event => { event.preventDefault(); if (!busy) onClose(); }}>
     <div className="modal-heading"><div><h2 id="modal-title">{title}</h2>{description && <p>{description}</p>}</div><button className="icon-button" aria-label="Close dialog" disabled={busy} onClick={onClose}><X size={19} /></button></div>
-    <form onSubmit={submit}><fieldset disabled={busy} className="modal-fields">{children}</fieldset>{error && <p className="error-message" role="alert">{error}</p>}<div className="form-actions"><button type="button" onClick={onClose} disabled={busy}>Cancel</button><button className="primary" type="submit" disabled={busy}>{busy ? 'Saving…' : submitLabel}</button></div></form>
+    <form onSubmit={submit}><fieldset disabled={busy} className="modal-fields">{children}</fieldset>{error && <p className="error-message" role="alert">{error}</p>}<div className="form-actions"><button type="button" onClick={onClose} disabled={busy}>Cancel</button><button className="primary" type="submit" disabled={busy || submitDisabled}>{busy ? 'Saving…' : submitLabel}</button></div></form>
   </dialog>;
 }
 

@@ -46,8 +46,9 @@ function IssueLoan({ data, save, close }) {
     finally { setLooking(false); }
   }
   function toggle(id) { setSelected(selected.includes(id) ? selected.filter(value => value !== id) : [...selected, id]); }
-  return <Modal title="Issue a loan" description="Find the student by ID, then choose up to three different items." onClose={close} submitLabel="Issue loan" onSave={form => {
+  return <Modal title="Issue a loan" description="Find the student by ID, then choose up to three different items." onClose={close} submitLabel="Issue loan" submitDisabled={!student || !student.active || Boolean(student.restricted) || !remaining || !selected.length} onSave={form => {
     if (!student || student.campus_id !== studentId) throw new Error('Find the student before issuing a loan.');
+    if (student.restricted) throw new Error('Borrowing restricted after a damaged return. Update the student status in Borrowers first.');
     if (!student.active) throw new Error('This student is inactive.');
     if (!remaining) throw new Error('3 items completed. Return an item before borrowing another.');
     if (!selected.length) throw new Error('Select at least one item.');
@@ -55,9 +56,9 @@ function IssueLoan({ data, save, close }) {
   }}>
     <div className="student-lookup"><Field label="Student ID"><input value={studentId} disabled={looking} onChange={e => { setStudentId(e.target.value.toUpperCase()); setStudent(null); setSelected([]); setLookupError(''); }} pattern="S00480[0-9]{3}" maxLength={9} placeholder="S00480001" required onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (!looking) lookup(); } }} /></Field><button type="button" disabled={looking || !/^S00480\d{3}$/.test(studentId)} onClick={lookup}>{looking ? 'Finding…' : 'Find student'}</button></div>
     {lookupError && <p className="error-message" role="alert">{lookupError}</p>}
-    {student && <div className="student-summary"><strong>{student.name}</strong><p>{student.campus_id} · {student.department}</p><p>{student.email}</p><p>{student.items_out} / 3 items borrowed · {remaining} remaining</p>{student.items.length > 0 && <p>Currently borrowed: {student.items.map(item => item.name).join(', ')}</p>}{!student.active && <p role="alert">This student is inactive.</p>}{!remaining && <p role="alert">3 items completed. Return an item before borrowing another.</p>}</div>}
+    {student && <div className="student-summary"><strong>{student.name}</strong><p>{student.campus_id} · {student.department}</p><p>{student.email}</p><p>{student.items_out} / 3 items borrowed · {remaining} remaining</p>{student.items.length > 0 && <p>Currently borrowed: {student.items.map(item => item.name).join(', ')}</p>}{Boolean(student.restricted) && <p role="alert" className="error-message">Borrowing restricted after a damaged return. Staff must clear the restriction in Borrowers before another loan can be issued.</p>}{!student.active && <p role="alert">This student is inactive.</p>}{!remaining && <p role="alert">3 items completed. Return an item before borrowing another.</p>}</div>}
     <Field label="Due date"><input name="due_on" type="date" defaultValue={nextWeek()} required /></Field>
-    {student?.active && remaining > 0 && <fieldset className="equipment-selection"><legend>Choose equipment ({selected.length} / {remaining})</legend>
+    {student?.active && !student.restricted && remaining > 0 && <fieldset className="equipment-selection"><legend>Choose equipment ({selected.length} / {remaining})</legend>
       <Field label="Find equipment"><input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Name, code or category" /></Field>
       {data.equipment.filter(item => `${item.name} ${item.asset_tag} ${item.category}`.toLowerCase().includes(search.toLowerCase())).map(item => {
         const held = student.items.some(existing => existing.equipment_id === item.id);

@@ -27,9 +27,9 @@ Node.js 22.12+ is required. Use a supported Node.js LTS release.
 * **Equipment records:** Add, edit, and delete equipment types. Track total, borrowed, available, and maintenance quantities. Reduce the maintenance count after repairs.
 * **Category management:** Create or rename equipment categories. Categories assigned to equipment cannot be deleted.
 * **Borrower directory:** Find students by ID (`S00480` followed by three digits). Maintain their contact details and eligibility.
-* **Loans and returns:** Limit each student to three outstanding items, one per equipment type. Edit due dates and inspect condition during returns. Damaged units enter maintenance automatically.
+* **Loans and returns:** Limit each student to three outstanding items, one per equipment type. Edit due dates and inspect condition during returns. Damaged units enter maintenance automatically, and the student is restricted from further borrowing. Staff can clear that restriction using Update status in Borrowers.
 * **Dashboard:** View available equipment, items on loan, and overdue loans. Current loans appear in due-date order.
-* **Search and filters:** Find equipment or borrowers and filter records by status. Dashboard and loan-register searches match student names/IDs, equipment names/codes, and due dates. Select a search field or search across all fields. Multiple search words must all match.
+* **Search and filters:** Find equipment or borrowers and filter records by status. Dashboard and loan-register searches match student names/IDs, equipment names/codes, and due dates. Select a search field or search across all fields. Equipment has a category filter, and Borrowers has explicit name and student-ID search options. Multiple search words must all match.
 
 ---
 
@@ -198,7 +198,7 @@ Use this command only for the prepared local installation. Other machines should
 3. The loan and its item records are inserted together. A failed check rolls back the transaction.
 4. The interface refreshes the equipment list and dashboard counts.
 
-Returns update only the selected loan items. If any selected item is invalid, the complete return request is rolled back. The remaining items stay on loan. Select whether each returned item is damaged. Damaged units increase maintenance stock within the same transaction. After repair, reduce the maintenance count in Equipment; those units become available again.
+Returns update only the selected loan items. If any selected item is invalid, the complete return request is rolled back. The remaining items stay on loan. Select whether each returned item is damaged. Damaged units increase maintenance stock and restrict the borrower within the same transaction. Restricted students cannot receive new loans; the issue form disables submission, and the API also rejects the request. Use Borrowers → Update status to clear the restriction. Repairing stock does not clear a student restriction. After repair, reduce the maintenance count in Equipment; those units become available again.
 
 Records with borrowing history cannot be deleted through equipment or borrower CRUD. Keep the equipment record and adjust its stock, or mark a borrower Inactive to retain that history. Deleting a completed loan explicitly removes its item records too; open loans cannot be deleted.
 
@@ -216,6 +216,7 @@ Records with borrowing history cannot be deleted through equipment or borrower C
 | GET / POST | `/api/borrowers` | List or create borrowers |
 | GET | `/api/borrowers/lookup/:campusId` | Look up student details, outstanding equipment, and quota |
 | PUT / DELETE | `/api/borrowers/:id` | Update or delete borrowers |
+| PATCH | `/api/borrowers/:id/restriction` | Set or clear borrowing restriction (`restricted`: 0 or 1) |
 | GET / POST | `/api/loans` | List loans or issue equipment |
 | PUT / DELETE | `/api/loans/:id` | Edit due date/notes or delete a completed loan |
 | POST | `/api/loans/:id/return` | Return selected loan items |
