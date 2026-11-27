@@ -17,7 +17,7 @@ export function formatDate(value) {
 }
 
 export function Status({ children }) {
-  const style = ['Overdue', 'Maintenance', 'Needs repair'].includes(children) ? 'dark' : ['Inactive', 'Retired', 'Returned'].includes(children) ? 'muted' : '';
+  const style = ['Overdue', 'Maintenance', 'Needs repair'].includes(children) ? 'dark' : ['Inactive', 'Returned'].includes(children) ? 'muted' : '';
   return <span className={`status ${style}`}>{children}</span>;
 }
 
@@ -77,8 +77,28 @@ export function LoanTable({ loans, onEdit, onReturn, onDelete, compact = false }
   if (!loans.length) return <Empty>No loans match this view.</Empty>;
   return <div className="table-scroll"><table><thead><tr><th>Borrower / loan</th><th>Equipment</th><th>Due date</th><th>Status</th><th className="actions-heading">Actions</th></tr></thead><tbody>{loans.map(loan => <tr key={loan.id}>
     <td><strong>{loan.borrower}</strong><small>#{String(loan.id).padStart(4, '0')} · {loan.campus_id}</small></td>
-    <td>{loan.items.map(item => <div className="loan-item" key={item.id}><span>{item.name}</span><small>{item.asset_tag}{item.returned_on ? ` · Returned ${formatDate(item.returned_on)}` : ''}</small></div>)}</td>
+    <td>{loan.items.map(item => <div className="loan-item" key={item.id}><span>{item.name}</span><small>{item.asset_tag}{item.returned_on ? ` · Returned ${formatDate(item.returned_on)}${item.damaged ? ' · Damaged' : ''}` : ''}</small></div>)}</td>
     <td className="date-cell">{formatDate(loan.due_on)}</td><td><Status>{loan.status}</Status></td>
-    <td><div className="row-actions">{!compact && <button onClick={() => onEdit(loan)} aria-label={`Edit loan ${loan.id}`}>Edit</button>}{loan.status !== 'Returned' ? <button onClick={() => onReturn(loan)} aria-label={`Return items for loan ${loan.id}`}>Return<ArrowUpRight size={12} /></button> : !compact && <button onClick={() => onDelete(loan)} aria-label={`Delete loan ${loan.id}`}>Delete</button>}</div></td>
+    <td><div className="row-actions">{onEdit && <button onClick={() => onEdit(loan)} aria-label={`Edit loan ${loan.id}`}>Edit</button>}{loan.status !== 'Returned' ? <button onClick={() => onReturn(loan)} aria-label={`Return items for loan ${loan.id}`}>Return<ArrowUpRight size={12} /></button> : !compact && <button onClick={() => onDelete(loan)} aria-label={`Delete loan ${loan.id}`}>Delete</button>}</div></td>
   </tr>)}</tbody></table></div>;
+}
+
+export function matchesLoan(loan, search, field = '') {
+  const fields = {
+    student: `${loan.borrower} ${loan.campus_id}`,
+    equipment: loan.items.map(item => `${item.name} ${item.asset_tag}`).join(' '),
+    due: `${loan.due_on} ${formatDate(loan.due_on)}`,
+  };
+  const haystack = (field ? fields[field] : `${Object.values(fields).join(' ')} ${loan.id} ${loan.status}`).toLowerCase();
+  return search.trim().toLowerCase().split(/\s+/).every(word => haystack.includes(word));
+}
+
+export function LoanFilters({ search, setSearch, field, setField, status, setStatus }) {
+  return <div className="filters">
+    <SearchInput value={search} onChange={setSearch} label="Search student, equipment or due date" />
+    <label className="filter-select"><span className="sr-only">Search field</span><select value={field} onChange={e => setField(e.target.value)}>
+      <option value="">All fields</option><option value="student">Student name / ID</option><option value="equipment">Equipment</option><option value="due">Due date</option>
+    </select></label>
+    {setStatus && <label className="filter-select"><span className="sr-only">Loan status</span><select value={status} onChange={e => setStatus(e.target.value)}><option value="">All statuses</option>{['Active', 'Overdue', 'Returned'].map(value => <option key={value}>{value}</option>)}</select></label>}
+  </div>;
 }

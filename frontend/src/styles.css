@@ -135,3 +135,12 @@ fieldset { min-width: 0; border: 0; margin: 0; padding: 0; }
   .slash { margin-inline: 6px; }
 }
 @media (pointer: coarse) { button { min-height: 44px; } input, select, textarea { font-size: 16px; } }
+
+.student-lookup { display: flex; align-items: end; gap: 12px; }
+.student-lookup .field { flex: 1; }
+.student-summary { background: #f2f2f2; border: 1px solid #ddd; padding: 16px; margin: 16px 0; }
+.student-summary p { margin: 6px 0; font-size: 13px; }
+.return-item { padding-bottom: 16px; border-bottom: 1px solid #ddd; margin-bottom: 12px; }
+.return-item .field { margin: 0 12px; }
+.checkbox-row:has(input:disabled) { opacity: .5; }
+.filters { flex-wrap: wrap; }

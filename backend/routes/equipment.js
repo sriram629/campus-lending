@@ -26,26 +26,22 @@ router.delete('/categories/:id', async (req, res) => {
 
 router.get('/', async (req, res) => {
   const [rows] = await db.query(`SELECT e.*, c.name AS category,
-    CASE WHEN EXISTS (SELECT 1 FROM loan_items li WHERE li.equipment_id = e.id AND li.returned_on IS NULL)
-    THEN 'On loan' ELSE e.service_status END AS availability
+    (SELECT COUNT(*) FROM loan_items li WHERE li.equipment_id = e.id AND li.returned_on IS NULL) AS on_loan
     FROM equipment e JOIN categories c ON c.id = e.category_id ORDER BY e.asset_tag`);
-  res.json(rows);
+  res.json(rows.map(item => ({ ...item, available: item.quantity - item.maintenance_quantity - item.on_loan })));
 });
 
 function values(data) {
   body(data);
-  const condition = text(data, 'item_condition');
-  const status = text(data, 'service_status');
-  if (!['Good', 'Fair', 'Needs repair'].includes(condition) || !['Ready', 'Maintenance', 'Retired'].includes(status)) {
-    fail(400, 'Choose a valid condition and service status.');
-  }
-  if (condition === 'Needs repair' && status === 'Ready') fail(400, 'Equipment needing repair must be in maintenance or retired.');
-  return [text(data, 'asset_tag', 40), text(data, 'name'), id(data.category_id), text(data, 'location'), condition, status];
+  if (!Number.isInteger(data.quantity) || data.quantity < 0 || data.quantity > 10000 ||
+      !Number.isInteger(data.maintenance_quantity) || data.maintenance_quantity < 0 || data.maintenance_quantity > data.quantity)
+    fail(400, 'Enter whole stock counts between 0 and 10000. Maintenance cannot exceed total stock.');
+  return [text(data, 'asset_tag', 40), text(data, 'name'), id(data.category_id), text(data, 'location'), data.quantity, data.maintenance_quantity];
 }
 
 router.post('/', async (req, res) => {
   const [result] = await db.execute(`INSERT INTO equipment
-    (asset_tag, name, category_id, location, item_condition, service_status) VALUES (?, ?, ?, ?, ?, ?)`, values(req.body));
+    (asset_tag, name, category_id, location, quantity, maintenance_quantity) VALUES (?, ?, ?, ?, ?, ?)`, values(req.body));
   res.status(201).json({ id: result.insertId });
 });
 
@@ -57,10 +53,10 @@ router.put('/:id', async (req, res) => {
     await connection.beginTransaction();
     const [records] = await connection.execute('SELECT id FROM equipment WHERE id = ? FOR UPDATE', [recordId]);
     if (!records.length) fail(404, 'Equipment not found.');
-    const [open] = await connection.execute('SELECT id FROM loan_items WHERE equipment_id = ? AND returned_on IS NULL', [recordId]);
-    if (open.length && data[5] !== 'Ready') fail(409, 'Return this item before changing its service status.');
+    const [[open]] = await connection.execute('SELECT COUNT(*) AS total FROM loan_items WHERE equipment_id = ? AND returned_on IS NULL', [recordId]);
+    if (data[4] - data[5] < open.total) fail(409, 'Total stock must cover borrowed items and maintenance items.');
     await connection.execute(`UPDATE equipment SET asset_tag = ?, name = ?, category_id = ?, location = ?,
-      item_condition = ?, service_status = ? WHERE id = ?`, [...data, recordId]);
+      quantity = ?, maintenance_quantity = ? WHERE id = ?`, [...data, recordId]);
     await connection.commit();
     res.json({ message: 'Equipment updated.' });
   } catch (error) {

@@ -6,7 +6,7 @@ Campus Lending manages equipment issued to students and staff. The application u
 
 ## 🎯 The "Why"
 
-A campus equipment desk needs to know which assets are available and who has borrowed each item. Campus Lending keeps those records in one interface. Unique asset tags identify physical items, while loan history connects each item to its borrower and due date.
+A campus equipment desk needs to know which assets are available and who has borrowed each item. Campus Lending keeps those records in one interface. Unique equipment codes identify stock groups, while loan history connects each item to its borrower and due date.
 
 This version is a local, single-operator academic project. It has no login or public deployment. The interface uses a black-and-white palette with gray shades for surfaces and statuses.
 
@@ -24,12 +24,12 @@ Node.js 22.12+ is required. Use a supported Node.js LTS release.
 
 ## ✨ Key Features
 
-* **Equipment records:** Add, edit, and delete individual assets. Track condition and service status. Items with loan history can be retired.
+* **Equipment records:** Add, edit, and delete equipment types. Track total, borrowed, available, and maintenance quantities. Reduce the maintenance count after repairs.
 * **Category management:** Create or rename equipment categories. Categories assigned to equipment cannot be deleted.
-* **Borrower directory:** Maintain campus IDs and contact details. Inactive borrowers cannot receive new loans.
-* **Loans and returns:** Issue several items together, edit due dates, and return selected items. Completed loans can be deleted explicitly.
+* **Borrower directory:** Find students by ID (`S00480` followed by three digits). Maintain their contact details and eligibility.
+* **Loans and returns:** Limit each student to three outstanding items, one per equipment type. Edit due dates and inspect condition during returns. Damaged units enter maintenance automatically.
 * **Dashboard:** View available equipment, items on loan, and overdue loans. Current loans appear in due-date order.
-* **Search and filters:** Find equipment or borrowers and filter records by status. Loan searches include asset tags and borrower names.
+* **Search and filters:** Find equipment or borrowers and filter records by status. Dashboard and loan-register searches match student names/IDs, equipment names/codes, and due dates. Select a search field or search across all fields. Multiple search words must all match.
 
 ---
 
@@ -57,7 +57,7 @@ The database contains five tables.
 | Table | Purpose | Relationships |
 | :--- | :--- | :--- |
 | `categories` | Equipment types | One category has many equipment items |
-| `equipment` | Individual assets | References `categories.id` |
+| `equipment` | Equipment types and stock counts | References `categories.id` |
 | `borrowers` | Student or staff records | One borrower has many loans |
 | `loans` | Issue date, due date, and notes | References `borrowers.id` |
 | `loan_items` | Items in a loan and their return dates | References `loans.id` and `equipment.id` |
@@ -70,9 +70,9 @@ erDiagram
     equipment ||--o{ loan_items : appears_in
 ```
 
-Every table has an integer primary key. Foreign keys protect related records. Asset tags, campus IDs, and email addresses are unique. A generated column in `loan_items` has a unique constraint that prevents more than one open loan for the same equipment item.
+Every table has an integer primary key. Foreign keys protect related records. Asset tags, campus IDs, and email addresses are unique. Each loan can contain a given equipment type once. Backend transactions lock the borrower and equipment rows to enforce the three-item quota and prevent stock from being overbooked. Each loan item represents one unit.
 
-A loan is overdue when its due date is earlier than the database's current date and at least one item remains unreturned. Dates follow the MySQL server's local calendar. Availability is calculated from service status and open loan items.
+A loan is overdue when its due date is earlier than the database's current date and at least one item remains unreturned. Dates follow the MySQL server's local calendar. Available stock equals total stock minus maintenance stock minus unreturned loan items. Stock edits cannot reduce the total below borrowed plus maintenance units.
 
 ---
 
@@ -87,7 +87,7 @@ git switch dev
 npm ci
 ```
 
-The `dev` branch must have been published before these clone instructions can reproduce this implementation. If working from the local project already prepared in VS Code, run commands from that project directory.
+If working from the local project already prepared in VS Code, run commands from that project directory.
 
 ### 2. Create a MySQL Database
 
@@ -138,7 +138,15 @@ Environment files are excluded from Git. `.env.example` contains a blank passwor
 npm run db:setup
 ```
 
-This reads `database/schema.sql`. Sample equipment and fictitious borrowers are inserted only when the relevant tables are empty. Existing records are preserved. Sample loan dates are relative to the database's current date.
+This reads `database/schema.sql` and upgrades the previous individual-asset schema without deleting loan history. Fresh databases receive 24 equipment types with varied stock counts and three fictitious students (`S00480001`–`S00480003`). Sample loan dates are relative to the database's current date.
+
+To add the demo catalog to an existing database explicitly:
+
+```bash
+node backend/db.js --setup --demo
+```
+
+This inserts missing demo equipment and raises matching demo stock to at least its sample quantity. Normal setup preserves stock counts. Original sample IDs `STU-1001`–`STU-1003` are converted to the new format when the target ID is unused. Other existing student IDs can be corrected through Borrowers.
 
 ### 5. Run Locally
 
@@ -185,14 +193,14 @@ Use this command only for the prepared local installation. Other machines should
 
 ## 🔁 Lending Flow
 
-1. Select an active borrower, available equipment, and a due date.
+1. Enter the student ID and select Find student. Review their details and remaining quota, then choose different equipment types and a due date.
 2. Express validates the request and starts a transaction. Equipment rows are locked in ID order before their availability is checked.
 3. The loan and its item records are inserted together. A failed check rolls back the transaction.
 4. The interface refreshes the equipment list and dashboard counts.
 
-Returns update only the selected loan items. If any selected item is invalid, the complete return request is rolled back. The remaining items stay on loan. After returning a damaged item, mark it as Maintenance in the Equipment screen.
+Returns update only the selected loan items. If any selected item is invalid, the complete return request is rolled back. The remaining items stay on loan. Select whether each returned item is damaged. Damaged units increase maintenance stock within the same transaction. After repair, reduce the maintenance count in Equipment; those units become available again.
 
-Records with borrowing history cannot be deleted through equipment or borrower CRUD. Use Retired or Inactive to retain that history. Deleting a completed loan explicitly removes its item records too; open loans cannot be deleted.
+Records with borrowing history cannot be deleted through equipment or borrower CRUD. Keep the equipment record and adjust its stock, or mark a borrower Inactive to retain that history. Deleting a completed loan explicitly removes its item records too; open loans cannot be deleted.
 
 ---
 
@@ -206,12 +214,13 @@ Records with borrowing history cannot be deleted through equipment or borrower C
 | GET / POST | `/api/equipment/categories` | List or create categories |
 | PUT / DELETE | `/api/equipment/categories/:id` | Update or delete categories |
 | GET / POST | `/api/borrowers` | List or create borrowers |
+| GET | `/api/borrowers/lookup/:campusId` | Look up student details, outstanding equipment, and quota |
 | PUT / DELETE | `/api/borrowers/:id` | Update or delete borrowers |
 | GET / POST | `/api/loans` | List loans or issue equipment |
 | PUT / DELETE | `/api/loans/:id` | Edit due date/notes or delete a completed loan |
 | POST | `/api/loans/:id/return` | Return selected loan items |
 
-Loan creation accepts `borrower_id`, an `equipment_ids` array, `due_on` in `YYYY-MM-DD` format, and optional `notes`. Return requests contain `item_ids` from the loan's item records. JSON errors include an `error` message.
+Loan creation accepts `borrower_id`, an `equipment_ids` array, `due_on` in `YYYY-MM-DD` format, and optional `notes`. Return requests contain `item_ids` from the loan's item records and `damaged_item_ids` (an empty array if none are damaged). Equipment writes require `quantity` and `maintenance_quantity` as whole numbers. Student IDs contain `S` plus eight digits and must match `S00480[0-9]{3}`. JSON errors include an `error` message.
 
 ---
 
