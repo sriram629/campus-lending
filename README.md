@@ -51,7 +51,7 @@ Choose either Docker or the manual setup. The public application uses demonstrat
 Install Git, then run:
 
 ```bash
-git clone --branch dev https://github.com/sriram629/campus-lending.git
+git clone --branch main https://github.com/sriram629/campus-lending.git
 cd campus-lending
 ```
 
@@ -354,6 +354,7 @@ campus-lending/
 │   └── package.json
 ├── .env.example
 ├── .nvmrc
+├── Campus_Lending_Project_Report.docx
 ├── Dockerfile
 ├── compose.yaml
 ├── render.yaml
